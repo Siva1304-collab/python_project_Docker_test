@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskMaster Pro - Docker Task Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header Styles */
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: slideDown 0.5s ease;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .docker-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .stat-title {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .stat-progress {
+            margin-top: 10px;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .stat-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Form Styles */
+        .form-card, .tasks-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .form-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Task List */
+        .task-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: #f0f0f0;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .task-item {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease;
+        }
+
+        .task-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .task-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .task-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 5px;
+            transition: transform 0.2s ease;
+        }
+
+        .task-actions button:hover {
+            transform: scale(1.1);
+        }
+
+        .task-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+        }
+
+        .priority {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .priority-high { background: #fee; color: #c00; }
+        .priority-medium { background: #fef; color: #f90; }
+        .priority-low { background: #efe; color: #090; }
+
+        .status {
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        .status-pending { background: #e3f2fd; color: #1976d2; }
+        .status-in-progress { background: #fff3e0; color: #f57c00; }
+        .status-completed { background: #e8f5e9; color: #388e3c; }
+
+        .due-date {
+            color: #999;
+        }
+
+        /* Animations */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: white;
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 15px;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 TaskMaster Pro</h1>
+            <p>Manage your tasks efficiently with style</p>
+            <div class="docker-badge">
+                🐳 Running in Docker Container | Python + Flask
+            </div>
+        </div>
+
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <div class="main-content">
+            <div class="form-card">
+                <h2 class="form-title">➕ Add New Task</h2>
+                <form id="taskForm">
+                    <div class="form-group">
+                        <label>Task Title *</label>
+                        <input type="text" id="title" required placeholder="Enter task title">
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="description" placeholder="Enter task description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <input type="text" id="category" placeholder="e.g., Work, Personal, Learning">
+                    </div>
+                    <div class="form-group">
+                        <label>Priority</label>
+                        <select id="priority">
+                            <option value="low">🟢 Low</option>
+                            <option value="medium">🟡 Medium</option>
+                            <option value="high">🔴 High</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Due Date</label>
+                        <input type="date" id="dueDate">
+                    </div>
+                    <button type="submit" class="btn">✨ Create Task</button>
+                </form>
+            </div>
+
+            <div class="tasks-card">
+                <h2 class="form-title">📝 Your Tasks</h2>
+                <div class="task-filters">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="pending">Pending</button>
+                    <button class="filter-btn" data-filter="in-progress">In Progress</button>
+                    <button class="filter-btn" data-filter="completed">Completed</button>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="🔍 Search tasks...">
+                </div>
+                <div id="tasksList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 20px;">✏️ Edit Task</h2>
+            <form id="editForm">
+                <input type="hidden" id="editId">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="editTitle" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="editDescription"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="editStatus">
+                        <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select id="editPriority">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Due Date</label>
+                    <input type="date" id="editDueDate">
+                </div>
+                <button type="submit" class="btn">💾 Update Task</button>
+                <button type="button" class="btn" onclick="closeModal()" style="background: #999; margin-top: 10px;">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentFilter = 'all';
+        let searchQuery = '';
+
+        // Load dashboard stats
+        async function loadStats() {
+            const response = await fetch('/api/dashboard/stats');
+            const stats = await response.json();
+            
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = `
+                <div class="stat-card" onclick="filterByStatus('all')">
+                    <div class="stat-title">Total Tasks</div>
+                    <div class="stat-value">${stats.total}</div>
+                </div>
+                <div class="stat-card" onclick="filterByStatus('pending')">
+                    <div class="stat-title">Pending</div>
+                    <div class="stat-value">${stats.pending}</div>
+                </div>
+                <div class="stat-card" onclick="filterByStatus('in-progress')">
+                    <div class="stat-title">In Progress</div>
+                    <div class="stat-value">${stats.in_progress}</div>
+                </div>
+                <div class="stat-card" onclick="filterByStatus('completed')">
+                    <div class="stat-title">Completed</div>
+                    <div class="stat-value">${stats.completed}</div>
+                    <div class="stat-progress">
+                        <div class="stat-progress-bar" style="width: ${stats.completion_rate}%"></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Completion Rate</div>
+                    <div class="stat-value">${stats.completion_rate}%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">High Priority Tasks</div>
+                    <div class="stat-value">${stats.high_priority}</div>
+                </div>
+            `;
+        }
+
+        // Load and display tasks
+        async function loadTasks() {
+            const response = await fetch('/api/tasks');
+            let tasks = await response.json();
+            
+            // Apply filters
+            if (currentFilter !== 'all') {
+                tasks = tasks.filter(task => task.status === currentFilter);
+            }
+            
+            if (searchQuery) {
+                tasks = tasks.filter(task => 
+                    task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    task.description.toLowerCase().includes(searchQuery.toLowerCase())
+                );
+            }
+            
+            displayTasks(tasks);
+        }
+
+        function displayTasks(tasks) {
+            const tasksList = document.getElementById('tasksList');
+            
+            if (tasks.length === 0) {
+                tasksList.innerHTML = '<div class="empty-state">✨ No tasks found. Create your first task!</div>';
+                return;
+            }
+            
+            tasksList.innerHTML = tasks.map(task => `
+                <div class="task-item" style="border-left-color: ${getPriorityColor(task.priority)}">
+                    <div class="task-header">
+                        <div class="task-title">${escapeHtml(task.title)}</div>
+                        <div class="task-actions">
+                            <button onclick="editTask('${task.id}')" title="Edit">✏️</button>
+                            <button onclick="deleteTask('${task.id}')" title="Delete">🗑️</button>
+                            <button onclick="toggleStatus('${task.id}', '${task.status}')" title="Change Status">
+                                ${getStatusIcon(task.status)}
+                            </button>
+                        </div>
+                    </div>
+                    ${task.description ? `<div class="task-description">${escapeHtml(task.description)}</div>` : ''}
+                    <div class="task-meta">
+                        <span class="priority priority-${task.priority}">${task.priority.toUpperCase()}</span>
+                        <span class="status status-${task.status}">${formatStatus(task.status)}</span>
+                        ${task.category ? `<span>📁 ${escapeHtml(task.category)}</span>` : ''}
+                        ${task.due_date ? `<span class="due-date">📅 ${task.due_date}</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getPriorityColor(priority) {
+            const colors = { high: '#c00', medium: '#f90', low: '#090' };
+            return colors[priority] || '#667eea';
+        }
+
+        function getStatusIcon(status) {
+            const icons = { pending: '⏳', 'in-progress': '🔄', completed: '✅' };
+            return icons[status] || '📝';
+        }
+
+        function formatStatus(status) {
+            const statuses = { pending: 'Pending', 'in-progress': 'In Progress', completed: 'Completed' };
+            return statuses[status] || status;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Create task
+        document.getElementById('taskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const task = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                category: document.getElementById('category').value,
+                priority: document.getElementById('priority').value,
+                due_date: document.getElementById('dueDate').value,
+                status: 'pending'
+            };
+            
+            await fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(task)
+            });
+            
+            document.getElementById('taskForm').reset();
+            await loadStats();
+            await loadTasks();
+        });
+
+        // Edit task
+        async function editTask(id) {
+            const response = await fetch(`/api/tasks/${id}`);
+            const task = await response.json();
+            
+            document.getElementById('editId').value = task.id;
+            document.getElementById('editTitle').value = task.title;
+            document.getElementById('editDescription').value = task.description || '';
+            document.getElementById('editStatus').value = task.status;
+            document.getElementById('editPriority').value = task.priority;
+            document.getElementById('editDueDate').value = task.due_date || '';
+            
+            document.getElementById('editModal').style.display = 'block';
+        }
+        
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const id = document.getElementById('editId').value;
+            const task = {
+                title: document.getElementById('editTitle').value,
+                description: document.getElementById('editDescription').value,
+                status: document.getElementById('editStatus').value,
+                priority: document.getElementById('editPriority').value,
+                due_date: document.getElementById('editDueDate').value
+            };
+            
+            await fetch(`/api/tasks/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(task)
+            });
+            
+            closeModal();
+            await loadStats();
+            await loadTasks();
+        });
+        
+        // Delete task
+        async function deleteTask(id) {
+            if (confirm('Are you sure you want to delete this task?')) {
+                await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+                await loadStats();
+                await loadTasks();
+            }
+        }
+        
+        // Toggle status
+        async function toggleStatus(id, currentStatus) {
+            let newStatus = 'pending';
+            if (currentStatus === 'pending') newStatus = 'in-progress';
+            else if (currentStatus === 'in-progress') newStatus = 'completed';
+            else newStatus = 'pending';
+            
+            await fetch(`/api/tasks/${id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            
+            await loadStats();
+            await loadTasks();
+        }
+        
+        // Filter functions
+        function filterByStatus(status) {
+            currentFilter = status;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.dataset.filter === status) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            loadTasks();
+        }
+        
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterByStatus(btn.dataset.filter);
+            });
+        });
+        
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            loadTasks();
+        });
+        
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+        
+        // Initial load
+        loadStats();
+        loadTasks();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            loadStats();
+            loadTasks();
+        }, 30000);
+    </script>
+</body>
+</html>
